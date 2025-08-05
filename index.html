@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sistema de Ventas Artesanias Mary</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    .container {
+      max-width: 1000px;
+      margin: auto;
+    }
+    input, button, select {
+      padding: 10px;
+      margin: 5px;
+      border-radius: 5px;
+      font-size: 1rem;
+    }
+    button {
+      cursor: pointer;
+      background: #007bff;
+      border: none;
+      color: white;
+      transition: background 0.3s ease;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .preview img {
+      max-width: 100px;
+    }
+    .venta-actual, .registro, .finanzas {
+      background: #fff;
+      padding: 15px;
+      margin-top: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+      white-space: nowrap;
+    }
+    .flex {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    /* Responsive */
+    @media (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+      input, button {
+        width: 100%;
+        box-sizing: border-box;
+        font-size: 1.1rem;
+      }
+      .flex {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .preview img {
+        max-width: 80px;
+      }
+      table, thead, tbody, th, td, tr {
+        display: block;
+      }
+      thead tr {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+      }
+      tr {
+        margin-bottom: 15px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        padding: 10px;
+        background: #fafafa;
+      }
+      td {
+        border: none;
+        position: relative;
+        padding-left: 50%;
+        text-align: left;
+        white-space: normal;
+      }
+      td:before {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        width: 45%;
+        padding-right: 10px;
+        white-space: nowrap;
+        font-weight: bold;
+        content: attr(data-label);
+      }
+      #totalVenta {
+        font-size: 1.5rem;
+        display: block;
+        margin-top: 10px;
+        text-align: right;
+      }
+      .venta-actual, .registro, .finanzas {
+        padding: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Sistema de Ventas Artesanias Mary</h1>
+
+    <div class="busqueda">
+      <h2>Buscar Producto</h2>
+      <input type="text" id="busquedaNombre" placeholder="Nombre del producto" />
+      <button onclick="buscarProducto()">Buscar</button>
+      <div id="opciones"></div>
+    </div>
+
+    <div class="preview" id="preview"></div>
+
+    <div class="venta-actual">
+      <h2>Venta Actual</h2>
+      <table id="tablaVenta">
+        <thead>
+          <tr>
+            <th>Imagen</th>
+            <th>Nombre</th>
+            <th>Precio</th>
+            <th>Cantidad</th>
+            <th>Subtotal</th>
+            <th>Eliminar</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <h3>Total: $<span id="totalVenta">0.00</span></h3>
+      <button onclick="registrarVenta()">Finalizar Venta</button>
+    </div>
+
+    <div class="registro">
+      <h2>Registro de Ventas del Día</h2>
+      <div id="historialVentas"></div>
+    </div>
+<div class="registro">
+  <h2>Registro de Ventas del Día</h2>
+  <h3><span id="totalVentasDia">0.00</span></h3>  <!-- nuevo -->
+  <div id="historialVentas"></div>
+</div>
+
+    <div class="finanzas">
+      <h2>Finanzas</h2>
+      <input type="number" id="inversion" placeholder="Registrar Inversión" />
+      <button onclick="agregarInversion()">Agregar</button>
+      <input type="number" id="gasto" placeholder="Registrar Gasto" />
+      <button onclick="agregarGasto()">Agregar</button>
+      <div id="resumenFinanzas"></div>
+    </div>
+  </div>
+
+  <script>const productos = [
+  {nombre: "Porta Lapiz", precio: 320, imagen: "1.jpeg"},
+  {nombre: "Magneto Mariposa", precio: 50, imagen: "2.jpeg"},
+  {nombre: "Gorra", precio: 250, imagen: "3.jpeg"},
+  {nombre: "Leche", precio: 2, imagen: "https://via.placeholder.com/80?text=Leche"}
+];
+
+let ventaActual = [];
+let historialVentas = JSON.parse(localStorage.getItem("ventas")) || [];
+let inversiones = parseFloat(localStorage.getItem("inversiones")) || 0;
+let gastos = parseFloat(localStorage.getItem("gastos")) || 0;
+
+function buscarProducto() {
+  const nombre = document.getElementById("busquedaNombre").value.trim();
+  const coincidencias = productos.filter(p => p.nombre.toLowerCase() === nombre.toLowerCase());
+  const opcionesDiv = document.getElementById("opciones");
+  opcionesDiv.innerHTML = "";
+
+  if (coincidencias.length === 0) {
+    opcionesDiv.textContent = "No se encontraron productos.";
+    return;
+  }
+
+  coincidencias.forEach((producto, index) => {
+    const btn = document.createElement("button");
+    btn.innerHTML = `<img src="${producto.imagen}" width="50" style="vertical-align: middle; margin-right: 8px;"> $${producto.precio}`;
+    btn.onclick = () => mostrarPreview(producto);
+    opcionesDiv.appendChild(btn);
+  });
+}
+
+function mostrarPreview(producto) {
+  const preview = document.getElementById("preview");
+  preview.innerHTML = `
+    <div class="flex">
+      <img src="${producto.imagen}" alt="img" />
+      <div>
+        <p><strong>${producto.nombre}</strong></p>
+        <p>Precio: C$${producto.precio}</p>
+        <input type="number" id="cantidad" min="1" value="1" />
+        <button onclick='agregarAVenta(${JSON.stringify(producto)})'>Agregar</button>
+      </div>
+    </div>
+  `;
+}
+
+function agregarAVenta(producto) {
+  const cantidad = parseInt(document.getElementById("cantidad").value);
+  if (cantidad < 1) return alert("Cantidad inválida");
+
+  const subtotal = cantidad * producto.precio;
+  ventaActual.push({...producto, cantidad, subtotal});
+  actualizarTabla();
+  document.getElementById("preview").innerHTML = "";
+  document.getElementById("opciones").innerHTML = "";
+  document.getElementById("busquedaNombre").value = "";
+}
+
+function actualizarTabla() {
+  const tbody = document.querySelector("#tablaVenta tbody");
+  tbody.innerHTML = "";
+  let total = 0;
+  ventaActual.forEach((p, i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td data-label="Imagen"><img src="${p.imagen}" width="50" /></td>
+      <td data-label="Nombre">${p.nombre}</td>
+      <td data-label="Precio">C$${p.precio.toFixed(2)}</td>
+      <td data-label="Cantidad">${p.cantidad}</td>
+      <td data-label="Subtotal">C$${p.subtotal.toFixed(2)}</td>
+      <td data-label="Eliminar">
+        <button onclick="eliminarProducto(${i})" style="background:#e74c3c; border:none; color:#fff; padding:5px 10px; border-radius:5px; cursor:pointer;">🗑️</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+    total += p.subtotal;
+  });
+  document.getElementById("totalVenta").textContent = total.toFixed(2);
+}
+
+function eliminarProducto(index) {
+  ventaActual.splice(index, 1);
+  actualizarTabla();
+}
+
+function registrarVenta() {
+  if (ventaActual.length === 0) return alert("No hay productos en la venta actual");
+
+  const fecha = new Date().toLocaleString();
+  const total = ventaActual.reduce((acc, p) => acc + p.subtotal, 0);
+  historialVentas.push({fecha, productos: ventaActual, total});
+  localStorage.setItem("ventas", JSON.stringify(historialVentas));
+  ventaActual = [];
+  actualizarTabla();
+  mostrarHistorial();
+  actualizarFinanzas();
+  alert("Venta registrada con éxito");
+}
+
+function mostrarHistorial() {
+  const div = document.getElementById("historialVentas");
+  div.innerHTML = "";
+  historialVentas.forEach((v, ventaIndex) => {
+    const card = document.createElement("div");
+    card.style.border = "1px solid #ccc";
+    card.style.marginBottom = "10px";
+    card.style.padding = "10px";
+    card.style.borderRadius = "8px";
+
+    const productosHTML = v.productos.map((p, i) => `
+      <li>
+        <img src="${p.imagen}" width="30" style="vertical-align:middle; margin-right:8px;">
+        ${p.nombre} x${p.cantidad} - C$${p.subtotal.toFixed(2)}
+        <button onclick="eliminarProductoHistorial(${ventaIndex}, ${i})" 
+          style="background:#e74c3c; border:none; color:#fff; padding:2px 7px; border-radius:5px; cursor:pointer; margin-left:8px;">
+          🗑️
+        </button>
+      </li>`).join('');
+
+    card.innerHTML = `
+      <h4>Venta #${ventaIndex + 1} - ${v.fecha}</h4>
+      <ul>${productosHTML}</ul>
+      <strong>Total: $${v.total.toFixed(2)}</strong>
+    `;
+
+    div.appendChild(card);
+  });
+
+  mostrarTotalVentasDia(); // <-- Aquí actualizamos el total diario al mostrar historial
+}
+
+function mostrarTotalVentasDia() {
+  const div = document.getElementById("historialVentas");
+  const totalDia = historialVentas.reduce((acc, v) => acc + v.total, 0);
+
+  // Crear o actualizar el elemento que muestra el total diario
+  let totalElem = document.getElementById("totalVentasDia");
+  if (!totalElem) {
+    totalElem = document.createElement("h3");
+    totalElem.id = "totalVentasDia";
+    totalElem.style.textAlign = "right";
+    totalElem.style.marginTop = "15px";
+    div.appendChild(totalElem);
+  }
+  totalElem.textContent = `Total de Ventas del Día: $${totalDia.toFixed(2)}`;
+}
+
+function eliminarProductoHistorial(ventaIndex, productoIndex) {
+  const venta = historialVentas[ventaIndex];
+  if (!venta) return;
+
+  // Eliminar producto
+  venta.productos.splice(productoIndex, 1);
+
+  // Recalcular total
+  venta.total = venta.productos.reduce((acc, p) => acc + p.subtotal, 0);
+
+  // Si la venta quedó sin productos, eliminar la venta completa
+  if (venta.productos.length === 0) {
+    historialVentas.splice(ventaIndex, 1);
+  }
+
+  // Guardar cambios
+  localStorage.setItem("ventas", JSON.stringify(historialVentas));
+
+  // Actualizar vista e info financiera
+  mostrarHistorial();
+  actualizarFinanzas();
+}
+
+function agregarInversion() {
+  const invInput = document.getElementById("inversion");
+  const val = parseFloat(invInput.value);
+  if (isNaN(val) || val <= 0) return alert("Ingrese un valor válido para inversión");
+  inversiones += val;
+  localStorage.setItem("inversiones", inversiones);
+  invInput.value = "";
+  actualizarFinanzas();
+}
+
+function agregarGasto() {
+  const gastInput = document.getElementById("gasto");
+  const val = parseFloat(gastInput.value);
+  if (isNaN(val) || val <= 0) return alert("Ingrese un valor válido para gasto");
+  gastos += val;
+  localStorage.setItem("gastos", gastos);
+  gastInput.value = "";
+  actualizarFinanzas();
+}
+
+function actualizarFinanzas() {
+  const totalVentas = historialVentas.reduce((acc, v) => acc + v.total, 0);
+  const ganancia = totalVentas - gastos - inversiones;
+  document.getElementById("resumenFinanzas").innerHTML = `
+    <p><strong>Inversiones:</strong> $${inversiones.toFixed(2)}</p>
+    <p><strong>Gastos:</strong> $${gastos.toFixed(2)}</p>
+    <p><strong>Ingresos:</strong> $${totalVentas.toFixed(2)}</p>
+    <p><strong>Ganancia Neta:</strong> $${ganancia.toFixed(2)}</p>
+  `;
+}
+
+// Inicializa
+mostrarHistorial();
+actualizarFinanzas();
+
+  </script>
+</body>
+</html>
